@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    match /reports/{reportId} {
+      function validNewReport() {
+        let data = request.resource.data;
+        return data.keys().hasAll([
+            'ownerUid', 'travelerName', 'email', 'airline', 'flightNumber',
+            'travelDate', 'lastSeenLocation', 'bagType', 'bagColor',
+            'identifyingDetails', 'createdAt', 'isDemo'
+          ])
+          && data.keys().hasOnly([
+            'ownerUid', 'travelerName', 'email', 'airline', 'flightNumber',
+            'travelDate', 'lastSeenLocation', 'bagType', 'bagColor',
+            'identifyingDetails', 'createdAt', 'isDemo'
+          ])
+          && data.ownerUid == request.auth.uid
+          && data.travelerName is string && data.travelerName.size() > 0 && data.travelerName.size() <= 120
+          && data.email is string && data.email.size() <= 254
+          && data.airline is string && data.airline.size() > 0 && data.airline.size() <= 120
+          && data.flightNumber is string && data.flightNumber.size() > 0 && data.flightNumber.size() <= 30
+          && data.travelDate is string && data.travelDate.size() == 10
+          && data.lastSeenLocation is string && data.lastSeenLocation.size() > 0 && data.lastSeenLocation.size() <= 240
+          && data.bagType in ['Suitcase', 'Backpack', 'Duffel bag', 'Other']
+          && data.bagColor is string && data.bagColor.size() > 0 && data.bagColor.size() <= 80
+          && data.identifyingDetails is string && data.identifyingDetails.size() <= 1000
+          && data.createdAt is timestamp
+          && data.isDemo == false;
+      }
+      allow create: if signedIn() && validNewReport();
+      allow get, list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /foundBags/{bagId} {
+      function validFoundBag() {
+        let data = request.resource.data;
+        return data.keys().hasAll([
+            'bagType', 'bagColor', 'foundDate', 'foundLocation',
+            'details', 'createdAt', 'isDemo'
+          ])
+          && data.keys().hasOnly([
+            'bagType', 'bagColor', 'foundDate', 'foundLocation',
+            'details', 'createdAt', 'isDemo'
+          ])
+          && data.bagType in ['Suitcase', 'Backpack', 'Duffel bag', 'Other']
+          && data.bagColor is string && data.bagColor.size() > 0 && data.bagColor.size() <= 80
+          && data.foundDate is string && data.foundDate.size() == 10
+          && data.foundLocation is string && data.foundLocation.size() > 0 && data.foundLocation.size() <= 240
+          && data.details is string && data.details.size() <= 1000
+          && data.createdAt is timestamp
+          && data.isDemo == false;
+      }
+      // Found-bag documents contain only public item details, never finder contact information.
+      allow create: if signedIn() && validFoundBag();
+      allow get, list: if signedIn();
+      allow update, delete: if false;
+    }
+  }
+}

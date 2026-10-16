@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#143d35" />
+  <title>Saved reports — Handoff</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="reports.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Handoff home"><span class="brand-mark">h</span><span>handoff</span></a>
+    <nav><a href="/#how">How it works</a><a href="/reports.html" aria-current="page">Saved reports</a><a href="/#report">Report a bag</a></nav>
+  </header>
+  <main class="reports-main">
+    <div class="reports-heading"><div><div class="eyebrow">LOCAL DATABASE</div><h1>Saved reports</h1><p>Reports saved by this browser account. Sample records remain in the local database.</p></div><div class="reports-actions"><a class="button button-dark" href="/#report">＋ New report</a><button class="button backup-button" id="download-backup" type="button">Download backup ↓</button></div></div>
+    <div class="report-count" id="report-count">Loading reports…</div>
+    <div class="report-tools"><label class="report-search"><span class="sr-only">Search saved reports</span><span class="search-icon">⌕</span><input id="report-search" type="search" placeholder="Search by name, airline, bag, or reference…" autocomplete="off"></label><div class="report-filters" role="group" aria-label="Filter reports"><button class="filter-button active" type="button" data-filter="all" aria-pressed="true">All</button><button class="filter-button" type="button" data-filter="saved" aria-pressed="false">My reports</button><button class="filter-button" type="button" data-filter="demo" aria-pressed="false">Sample data</button></div></div>
+    <div class="report-list" id="report-list" aria-live="polite"></div>
+    <section class="matches-section" aria-labelledby="matches-heading">
+      <div class="matches-heading"><div><div class="eyebrow">A POSSIBLE WAY BACK</div><h2 id="matches-heading">Found-bag matches</h2><p>We compare type, color, date, location and visible details. Scores rank clues; they are not probabilities. Ask airport staff to verify any match.</p></div><a class="text-link" href="/#found">Report a found bag ↗</a></div>
+      <div class="matches-list" id="matches-list" aria-live="polite"><p class="empty-state">Looking for possible matches…</p></div>
+    </section>    <p class="local-note">Download backups contain contact and travel details. Keep the file private. No match does not mean your bag has not been found.</p>
+  </main>
+  <footer><a class="brand footer-brand" href="/"><span class="brand-mark">h</span><span>handoff</span></a><span>Getting lost things moving again.</span><a href="/#report">Start a report ↑</a></footer>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="firebase-client.js"></script>
+  <script src="reports.js"></script>
+</body>
+</html>
+
+
+
+
+
+
