@@ -4,6 +4,7 @@ const summary = document.querySelector('#saved-summary');
 const toast = document.querySelector('#toast');
 const backendStatus = document.querySelector('#backend-status');
 const STORAGE_KEY = 'handoff-lost-bag-report-v1';
+const DRAFT_KEY = 'handoff-report-draft-v1';
 const firebaseCloud = window.handoffFirebase;
 const localServer = ['http:', 'https:'].includes(window.location.protocol);
 
@@ -16,7 +17,7 @@ function showToast(message) {
 function displayReport(report, receipt = '', storageMode = 'local') {
   const date = report.date ? new Date(`${report.date}T00:00:00`).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'date not provided';
   const label = storageMode === 'firebase' ? 'Your report is saved to Firebase.' : storageMode === 'server' ? 'Your report is saved to this computer.' : 'Your report is saved in this browser.';
-  summary.textContent = `${report.name}, ${label} Your ${report.color.toLowerCase()} ${report.type.toLowerCase()} report for ${report.airline} flight ${report.flight} (${date}) is recorded. Last seen: ${report.location}.${receipt ? ` Your reference is ${receipt}.` : ''}`;
+  summary.textContent = `${report.name}, ${label} Your ${report.color.toLowerCase()} ${report.type.toLowerCase()} report at ${report.airline}${report.flight ? `, ${report.flight}` : ''} (${date}) is recorded. Last seen: ${report.location}.${receipt ? ` Your reference is ${receipt}.` : ''}`;
   savedCard.querySelector('.eyebrow').textContent = storageMode === 'firebase' ? 'SAVED TO FIREBASE' : storageMode === 'server' ? 'SAVED TO LOCAL DATABASE' : 'SAVED IN THIS BROWSER';
   savedCard.querySelector('#clear-report').hidden = storageMode !== 'local';
   savedCard.classList.remove('hidden');
@@ -24,9 +25,24 @@ function displayReport(report, receipt = '', storageMode = 'local') {
 
 if (firebaseCloud) {
   backendStatus.textContent = 'Connecting to Firebase…';
-  firebaseCloud.ready.then(() => {
-    backendStatus.textContent = 'Firebase cloud connected';
-    backendStatus.classList.add('connected');
+  firebaseCloud.ready.then((user) => {
+    const accountLink = document.querySelector('#account-link');
+    if (user && !user.isAnonymous) {
+      backendStatus.textContent = 'Firebase cloud connected';
+      backendStatus.classList.add('connected');
+      if (accountLink) {
+        accountLink.textContent = 'Sign out';
+        accountLink.href = '#signout';
+        accountLink.addEventListener('click', async (event) => {
+          event.preventDefault();
+          await firebaseCloud.auth.signOut();
+          window.location.reload();
+        });
+      }
+    } else {
+      backendStatus.textContent = 'Sign in to save to Firebase';
+      if (accountLink) accountLink.textContent = 'Sign in';
+    }
   }).catch(() => {
     backendStatus.textContent = 'Firebase setup needs attention';
   });
@@ -40,6 +56,12 @@ if (firebaseCloud) {
 try {
   const existing = localStorage.getItem(STORAGE_KEY);
   if (existing && !firebaseCloud) displayReport(JSON.parse(existing));
+  const draft = sessionStorage.getItem(DRAFT_KEY);
+  if (draft) {
+    const values = JSON.parse(draft);
+    for (const [key, value] of Object.entries(values)) if (form.elements[key]) form.elements[key].value = value;
+    sessionStorage.removeItem(DRAFT_KEY);
+  }
 } catch (error) {
   console.warn('Could not read the saved Handoff demo report.', error);
 }
@@ -52,6 +74,11 @@ form.addEventListener('submit', async (event) => {
   if (firebaseCloud) {
     try {
       const user = await firebaseCloud.ready;
+      if (!user || user.isAnonymous) {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(report));
+        window.location.href = `/auth.html?return=${encodeURIComponent('/#report')}`;
+        return;
+      }
       const document = {
         ownerUid: user.uid,
         travelerName: report.name.trim(),
@@ -63,6 +90,7 @@ form.addEventListener('submit', async (event) => {
         bagType: report.type,
         bagColor: report.color.trim(),
         identifyingDetails: report.details.trim(),
+        status: 'missing',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         isDemo: false
       };

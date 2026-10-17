@@ -16,6 +16,7 @@ HOST = "127.0.0.1"
 PORT = 8000
 MAX_BODY = 16_384
 BAG_TYPES = {"Suitcase", "Backpack", "Duffel bag", "Other"}
+REPORT_STATUSES = {"missing", "possible-match", "reunited", "closed"}
 
 
 def initialize_database() -> None:
@@ -42,6 +43,8 @@ def initialize_database() -> None:
         columns = {row[1] for row in db.execute("PRAGMA table_info(lost_bag_reports)")}
         if "is_demo" not in columns:
             db.execute("ALTER TABLE lost_bag_reports ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0")
+        if "status" not in columns:
+            db.execute("ALTER TABLE lost_bag_reports ADD COLUMN status TEXT NOT NULL DEFAULT 'missing'")
         db.execute("""
             CREATE TABLE IF NOT EXISTS found_bag_reports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,7 +126,7 @@ class HandoffHandler(SimpleHTTPRequestHandler):
                 rows = db.execute("""
                     SELECT receipt_code, created_at, traveler_name, airline,
                            flight_number, travel_date, last_seen_location,
-                           bag_type, bag_color, identifying_details, is_demo
+                           bag_type, bag_color, identifying_details, is_demo, status, id
                     FROM lost_bag_reports ORDER BY created_at DESC, id DESC
                 """).fetchall()
             self._json(200, {"reports": [dict(row) for row in rows]})
@@ -173,10 +176,10 @@ class HandoffHandler(SimpleHTTPRequestHandler):
             report = {
                 "traveler_name": clean_string(data.get("name"), "Name", 120),
                 "email": clean_string(data.get("email"), "Email", 254),
-                "airline": clean_string(data.get("airline"), "Airline", 120),
-                "flight_number": clean_string(data.get("flight"), "Flight number", 30),
-                "travel_date": clean_string(data.get("date"), "Travel date", 10),
-                "last_seen_location": clean_string(data.get("location"), "Last seen location", 240),
+                "airline": clean_string(data.get("airline"), "Type of place", 120),
+                "flight_number": clean_string(data.get("flight"), "Platform, gate, floor, or area", 30),
+                "travel_date": clean_string(data.get("date"), "Date last seen", 10),
+                "last_seen_location": clean_string(data.get("location"), "Place details", 240),
                 "bag_type": clean_string(data.get("type"), "Bag type", 30),
                 "bag_color": clean_string(data.get("color"), "Bag color", 80),
                 "identifying_details": clean_string(data.get("details", ""), "Details", 1000, required=False),
@@ -205,6 +208,65 @@ class HandoffHandler(SimpleHTTPRequestHandler):
             self._json(400, {"error": str(error)})
         except sqlite3.Error:
             self._json(500, {"error": "The report could not be saved. Please try again."})
+
+    def do_PATCH(self):
+        match = re.fullmatch(r"/api/reports/([A-Z0-9-]+)", self.path)
+        if not match:
+            self._json(404, {"error": "Report not found."})
+            return
+        try:
+            data = self._body()
+            allowed = {"status", "name", "email", "airline", "flight", "date", "location", "type", "color", "details"}
+            if not data or set(data) - allowed:
+                raise ValueError("Invalid report update.")
+            updates = {}
+            if "status" in data:
+                updates["status"] = clean_string(data["status"], "Status", 24)
+                if updates["status"] not in REPORT_STATUSES:
+                    raise ValueError("Choose a valid report status.")
+            if "name" in data: updates["traveler_name"] = clean_string(data["name"], "Name", 120)
+            if "email" in data:
+                updates["email"] = clean_string(data["email"], "Email", 254)
+                if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", updates["email"]):
+                    raise ValueError("Enter a valid email address.")
+            if "airline" in data: updates["airline"] = clean_string(data["airline"], "Type of place", 120)
+            if "flight" in data: updates["flight_number"] = clean_string(data["flight"], "Platform, gate, floor, or area", 30)
+            if "date" in data:
+                updates["travel_date"] = clean_string(data["date"], "Date last seen", 10)
+                date.fromisoformat(updates["travel_date"])
+            if "location" in data: updates["last_seen_location"] = clean_string(data["location"], "Place details", 240)
+            if "type" in data:
+                updates["bag_type"] = clean_string(data["type"], "Bag type", 30)
+                if updates["bag_type"] not in BAG_TYPES: raise ValueError("Choose a valid bag type.")
+            if "color" in data: updates["bag_color"] = clean_string(data["color"], "Bag color", 80)
+            if "details" in data: updates["identifying_details"] = clean_string(data["details"], "Details", 1000, required=False)
+            with sqlite3.connect(DB_PATH) as db:
+                cursor = db.execute(
+                    "UPDATE lost_bag_reports SET " + ", ".join(f"{key} = ?" for key in updates) + " WHERE receipt_code = ? AND is_demo = 0",
+                    [*updates.values(), match.group(1)]
+                )
+                if not cursor.rowcount:
+                    self._json(404, {"error": "Saved report not found."})
+                    return
+            self._json(200, {"ok": True})
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._json(400, {"error": "Invalid JSON request."})
+        except ValueError as error:
+            self._json(400, {"error": str(error)})
+        except sqlite3.Error:
+            self._json(500, {"error": "The report could not be updated. Please try again."})
+
+    def do_DELETE(self):
+        match = re.fullmatch(r"/api/reports/([A-Z0-9-]+)", self.path)
+        if not match:
+            self._json(404, {"error": "Report not found."})
+            return
+        with sqlite3.connect(DB_PATH) as db:
+            cursor = db.execute("DELETE FROM lost_bag_reports WHERE receipt_code = ? AND is_demo = 0", (match.group(1),))
+        if not cursor.rowcount:
+            self._json(404, {"error": "Saved report not found."})
+            return
+        self._json(200, {"ok": True})
 
 
 def main() -> None:

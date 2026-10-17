@@ -9,12 +9,19 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!form.reportValidity()) return;
   const item = Object.fromEntries(new FormData(form).entries());
+  const placePrefix = `${item.placeType} — `;
+  item.location = `${placePrefix}${item.location.trim().slice(0, 240 - placePrefix.length)}`;
+  delete item.placeType;
   const saveButton = form.querySelector('button[type="submit"]');
   saveButton.disabled = true;
   try {
     let reference;
     if (firebaseCloud) {
-      await firebaseCloud.ready;
+      const user = await firebaseCloud.ready;
+      if (!user || user.isAnonymous) {
+        window.location.href = `/auth.html?return=${encodeURIComponent('/#found')}`;
+        return;
+      }
       const doc = await firebaseCloud.db.collection('foundBags').add({
         bagType: item.type,
         bagColor: item.color.trim(),

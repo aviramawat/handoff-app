@@ -8,7 +8,12 @@ if (configured && window.firebase) {
     const auth = app.auth();
     const db = app.firestore();
     const ready = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-      .then(() => auth.currentUser || auth.signInAnonymously().then(result => result.user));
+      .then(() => new Promise((resolve, reject) => {
+        const unsubscribe = auth.onAuthStateChanged(user => {
+          unsubscribe();
+          resolve(user);
+        }, reject);
+      }));
     window.handoffFirebase = { app, auth, db, ready };
   } catch (error) {
     console.error('Could not initialize Firebase for Handoff.', error);

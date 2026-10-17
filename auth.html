@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#143d35" />
+  <title>Sign in — Handoff</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body class="auth-page">
+  <header class="topbar"><a class="brand" href="/" aria-label="Handoff home"><span class="brand-mark">h</span><span>handoff</span></a><nav><a href="/">Back to Handoff</a></nav></header>
+  <main class="auth-main">
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> YOUR REPORTS, IN ONE PLACE</div>
+      <h1 id="auth-title">Welcome back.</h1>
+      <p class="auth-intro" id="auth-intro">Sign in to save and find your bag reports from any device.</p>
+      <div class="auth-tabs" role="tablist" aria-label="Account options">
+        <button type="button" class="auth-tab active" id="signin-tab" role="tab" aria-selected="true">Sign in</button>
+        <button type="button" class="auth-tab" id="register-tab" role="tab" aria-selected="false">Create account</button>
+      </div>
+      <div class="social-auth" aria-label="Continue with a social account">
+        <button class="social-button" type="button" id="google-login"><span class="google-mark" aria-hidden="true">G</span>Continue with Google</button>
+        <button class="social-button" type="button" id="facebook-login"><span class="facebook-mark" aria-hidden="true">f</span>Continue with Facebook</button>
+      </div>
+      <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
+      <div class="auth-divider"><span>or use email</span></div>
+      <form id="auth-form" novalidate>
+        <label class="auth-field hidden" id="name-field"><span>Your name</span><input name="name" autocomplete="name" maxlength="120" placeholder="e.g. Alex Morgan"></label>
+        <label class="auth-field"><span>Email address</span><input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="you@example.com"></label>
+        <label class="auth-field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required minlength="6" placeholder="At least 6 characters"></label>
+        <button class="button button-dark auth-submit" id="auth-submit" type="submit">Sign in <span>→</span></button>
+      </form>
+      <button type="button" class="forgot-button" id="forgot-password">Forgot password?</button>
+      <p class="auth-privacy">Your private lost-bag reports are linked to your account. Found-bag descriptions can be shared to help people spot a possible match.</p>
+    </section>
+  </main>
+  <footer><a class="brand footer-brand" href="/"><span class="brand-mark">h</span><span>handoff</span></a><span>Getting lost things moving again.</span></footer>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js?v=auth-ui-fix-2"></script>
+  <script src="firebase-client.js?v=auth-ui-fix-2"></script>
+  <script src="auth.js?v=duplicate-account-message-2"></script>
+</body>
+</html>
